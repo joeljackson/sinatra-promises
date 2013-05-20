@@ -9,8 +9,16 @@ module Sinatra
 
     def async_handler
       res = catch(:halt) {yield}
-      old_invoke do
-        res
+      if res.is_a?(EventMachine::Q::Promise)
+        res.then do |result|
+          body result
+          request.env['async.callback'].call(@response.finish)
+        end
+        throw :async
+      else
+        old_invoke do
+          res
+        end
       end
     end
   end
